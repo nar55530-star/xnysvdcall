@@ -1,7 +1,12 @@
-export default {
+export class DanmuRoom {
+  constructor(state, env) {
+    this.state = state;
+    this.clients = new Set();
+  }
+
   async fetch(request) {
     if (request.headers.get("Upgrade") !== "websocket") {
-      return new Response("Not WebSocket", { status: 400 });
+      return new Response("Expected websocket", { status: 400 });
     }
 
     const pair = new WebSocketPair();
@@ -9,10 +14,7 @@ export default {
     const server = pair[1];
 
     server.accept();
-
-    // 简单全局存储（临时用，够你用）
-    globalThis.clients = globalThis.clients || [];
-    globalThis.clients.push(server);
+    this.clients.add(server);
 
     server.addEventListener("message", (event) => {
       let data;
@@ -23,27 +25,30 @@ export default {
       }
 
       if (data.type === "danmu") {
-        const msg = JSON.stringify({
-          type: "danmu",
-          text: data.text
-        });
+        const msg = JSON.stringify(data);
 
-        // 广播给所有连接
-        globalThis.clients.forEach(ws => {
+        for (const ws of this.clients) {
           try {
             ws.send(msg);
           } catch {}
-        });
+        }
       }
     });
 
     server.addEventListener("close", () => {
-      globalThis.clients = globalThis.clients.filter(ws => ws !== server);
+      this.clients.delete(server);
     });
 
     return new Response(null, {
       status: 101,
       webSocket: client
     });
+  }
+}
+
+export default {
+  fetch(request, env) {
+    const id = env.DANMU_ROOM.idFromName("global-room");
+    return env.DANMU_ROOM.get(id).fetch(request);
   }
 };
