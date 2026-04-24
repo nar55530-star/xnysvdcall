@@ -613,8 +613,7 @@ startTv();
 let danmuSocket = null;
 
 function connectDanmuSocket(){
-  const wsUrl = "wss://danmu-live.nar55530.workers.dev";
-
+ const wsUrl = "wss://danmu-live.nar55530.workers.dev/?room=1";
   danmuSocket = new WebSocket(wsUrl);
 
   danmuSocket.onmessage = (event)=>{
