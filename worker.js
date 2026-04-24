@@ -1,12 +1,12 @@
 export class DanmuRoom {
   constructor(state, env) {
     this.state = state;
-    this.sessions = new Set();
+    this.sessions = [];
   }
 
   async fetch(request) {
-    const upgradeHeader = request.headers.get("Upgrade");
-    if (upgradeHeader !== "websocket") {
+    // 必须是 WebSocket 请求
+    if (request.headers.get("Upgrade") !== "websocket") {
       return new Response("Expected WebSocket", { status: 426 });
     }
 
@@ -15,7 +15,7 @@ export class DanmuRoom {
     const server = pair[1];
 
     server.accept();
-    this.sessions.add(server);
+    this.sessions.push(server);
 
     server.addEventListener("message", (event) => {
       let data;
@@ -25,27 +25,23 @@ export class DanmuRoom {
         return;
       }
 
-      if (data.type === "danmu" && data.text) {
+      if (data.type === "danmu") {
         const msg = JSON.stringify({
           type: "danmu",
-          text: String(data.text).slice(0, 30),
-          time: Date.now()
+          text: data.text
         });
 
-        for (const ws of this.sessions) {
+        // 广播给所有人
+        this.sessions.forEach(ws => {
           try {
             ws.send(msg);
           } catch {}
-        }
+        });
       }
     });
 
     server.addEventListener("close", () => {
-      this.sessions.delete(server);
-    });
-
-    server.addEventListener("error", () => {
-      this.sessions.delete(server);
+      this.sessions = this.sessions.filter(ws => ws !== server);
     });
 
     return new Response(null, {
@@ -56,9 +52,8 @@ export class DanmuRoom {
 }
 
 export default {
-  async fetch(request, env) {
-    const id = env.DANMU_ROOM.idFromName("xuniyusheng-room");
-    const room = env.DANMU_ROOM.get(id);
-    return room.fetch(request);
+  fetch(request, env) {
+    const id = env.DANMU_ROOM.idFromName("room1");
+    return env.DANMU_ROOM.get(id).fetch(request);
   }
 };
