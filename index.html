@@ -516,7 +516,7 @@ function renderBtns(){
       renderBtns();
 
       /* 点一次只出现一条弹幕 */
-      sendDanmu(t);
+     sendLiveDanmu(t);
     };
 
     box.appendChild(b);
@@ -542,6 +542,7 @@ function sendDanmu(text){
 
   layer.appendChild(d);
   setTimeout(()=>d.remove(),duration*1000);
+
 }
 
 // ========= 电视机视频逻辑 =========
@@ -610,6 +611,45 @@ tvVideo.addEventListener("click", async ()=>{
 });
 
 startTv();
+// ====== 实时弹幕（Cloudflare） ======
+let danmuSocket = null;
+
+function connectDanmuSocket(){
+  const wsUrl = "wss://danmu-live.nar55530.workers.dev";
+
+  danmuSocket = new WebSocket(wsUrl);
+
+  danmuSocket.onmessage = (event)=>{
+    try{
+      const data = JSON.parse(event.data);
+      if(data.type === "danmu"){
+        sendDanmu(data.text); // 收到就显示
+      }
+    }catch(e){}
+  };
+
+  danmuSocket.onclose = ()=>{
+    setTimeout(connectDanmuSocket, 2000); // 自动重连
+  };
+
+  danmuSocket.onerror = ()=>{
+    try{ danmuSocket.close(); }catch(e){}
+  };
+}
+
+function sendLiveDanmu(text){
+  if(danmuSocket && danmuSocket.readyState === WebSocket.OPEN){
+    danmuSocket.send(JSON.stringify({
+      type: "danmu",
+      text
+    }));
+  }else{
+    sendDanmu(text); // 断线 fallback
+  }
+}
+
+// 启动连接
+connectDanmuSocket();
 </script>
 
 </body>
