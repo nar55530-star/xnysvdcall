@@ -641,12 +641,24 @@ function sendLiveDanmu(text){
       text
     }));
   }else{
-    sendDanmu(text); // 断线 fallback
+    console.log("等待连接...");
+    const wait = setInterval(()=>{
+      if(danmuSocket && danmuSocket.readyState === WebSocket.OPEN){
+        clearInterval(wait);
+        danmuSocket.send(JSON.stringify({
+          type: "danmu",
+          text
+        }));
+      }
+    },100);
   }
 }
-
 // 启动连接
-connectDanmuSocket();
+document.addEventListener("click", ()=>{
+  if(!danmuSocket){
+    connectDanmuSocket();
+  }
+}, { once: true });
 </script>
 
 </body>
