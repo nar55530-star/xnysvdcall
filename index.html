@@ -542,6 +542,28 @@ function sendDanmu(text){
 
   layer.appendChild(d);
   setTimeout(()=>d.remove(),duration*1000);
+  const el = document.createElement("div");
+  el.innerText = text;
+  el.style.position = "absolute";
+  el.style.whiteSpace = "nowrap";
+  el.style.left = "100%";
+  el.style.top = Math.random() * 80 + "%";
+  el.style.color = "#fff";
+  el.style.fontSize = "20px";
+  el.style.pointerEvents = "none";
+
+  document.body.appendChild(el);
+
+  // 动画（从右往左）
+  let x = window.innerWidth;
+  const timer = setInterval(() => {
+    x -= 2;
+    el.style.left = x + "px";
+    if (x < -200) {
+      clearInterval(timer);
+      el.remove();
+    }
+  }, 16);
 
 }
 
