@@ -27,6 +27,7 @@ export class DanmuRoom {
       if (data.type === "danmu") {
         const msg = JSON.stringify(data);
 
+        // 广播给所有连接
         for (const ws of this.clients) {
           try {
             ws.send(msg);
@@ -48,8 +49,9 @@ export class DanmuRoom {
 
 export default {
   fetch(request, env) {
-    // ⭐⭐必须固定写死⭐⭐
-    const id = env.DANMU_ROOM.idFromName("global-room");
+    // ⭐⭐⭐ 固定唯一房间（关键！！！）
+    const id = env.DANMU_ROOM.idFromName("fixed-room-001");
+
     return env.DANMU_ROOM.get(id).fetch(request);
   }
 };
