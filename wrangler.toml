@@ -7,4 +7,4 @@ name = "DANMU_ROOM"
 class_name = "DanmuRoom"
 
 [[migrations]]
-tag = "v4"
+tag = "v5"
