@@ -1,0 +1,11 @@
+name = "danmu-live"
+main = "worker.js"
+compatibility_date = "2026-04-01"
+
+[[durable_objects.bindings]]
+name = "DANMU_ROOM"
+class_name = "DanmuRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DanmuRoom"]
