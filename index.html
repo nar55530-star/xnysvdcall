@@ -516,7 +516,8 @@ function renderBtns(){
       renderBtns();
 
       /* 点一次只出现一条弹幕 */
-     sendLiveDanmu(t);
+    sendDanmu(t);      // 本地立刻显示
+sendLiveDanmu(t);  // 再发到服务器同步
     };
 
     box.appendChild(b);
@@ -536,37 +537,12 @@ function sendDanmu(text){
   d.style.top = nextLaneTopPx() + "px";
   d.style.left="100%";
 
-  /* 不要太挤：速度稍慢一点，条数也变成 1 条/点击 */
   const duration=16+Math.random()*5;
   d.style.animationDuration=duration+"s";
 
   layer.appendChild(d);
   setTimeout(()=>d.remove(),duration*1000);
-  const el = document.createElement("div");
-  el.innerText = text;
-  el.style.position = "absolute";
-  el.style.whiteSpace = "nowrap";
-  el.style.left = "100%";
-  el.style.top = Math.random() * 80 + "%";
-  el.style.color = "#fff";
-  el.style.fontSize = "20px";
-  el.style.pointerEvents = "none";
-
-  document.body.appendChild(el);
-
-  // 动画（从右往左）
-  let x = window.innerWidth;
-  const timer = setInterval(() => {
-    x -= 2;
-    el.style.left = x + "px";
-    if (x < -200) {
-      clearInterval(timer);
-      el.remove();
-    }
-  }, 16);
-
 }
-
 // ========= 电视机视频逻辑 =========
 const tvOverlay = document.getElementById("tvOverlay");
 const tvFrame = document.getElementById("tvFrame");
