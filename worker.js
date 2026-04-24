@@ -48,6 +48,7 @@ export class DanmuRoom {
 
 export default {
   fetch(request, env) {
+    // ⭐⭐必须固定写死⭐⭐
     const id = env.DANMU_ROOM.idFromName("global-room");
     return env.DANMU_ROOM.get(id).fetch(request);
   }
