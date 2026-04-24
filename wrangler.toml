@@ -1,3 +1,7 @@
 name = "danmu-live"
 main = "worker.js"
 compatibility_date = "2024-04-01"
+
+[[migrations]]
+tag = "v2"
+deleted_classes = ["DanmuRoom"]
