@@ -7,5 +7,4 @@ name = "DANMU_ROOM"
 class_name = "DanmuRoom"
 
 [[migrations]]
-tag = "v3"
-new_sqlite_classes = ["DanmuRoom"]
+tag = "v4"
