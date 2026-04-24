@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>栩你渝生投票提醒</title>
+
+<style>
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  font-family:"Microsoft YaHei";
+
+  /* 去掉前面的绿色/白色覆盖层，让背景图最明显 */
+  background: url("vd.png");
+
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  /* 轻微平移，让动图更“显眼” */
+  animation:bgPan 14s ease-in-out infinite alternate;
+
+  overflow:hidden;
+  color:#3a5a1a;
+}
+
+@keyframes bgPan{
+  from{ background-position: 45% 40%; }
+  to{ background-position: 55% 60%; }
+}
+
+.tv-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,0.85);
+  backdrop-filter: blur(2px);
+  opacity:1;
+  transition:opacity 380ms ease;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.tv-overlay.hidden{
+  opacity:0;
+  pointer-events:none;
+}
+.tv-frame{
+  position:relative;
+  width:min(94vw, 920px);
+  aspect-ratio: 16 / 9;
+  border-radius:18px;
+  background:#000;
+  overflow:hidden;
+  box-shadow:0 30px 90px rgba(0,0,0,0.55);
+  border:2px solid rgba(255,255,255,0.10);
+  transform:scale(1);
+  transition:transform 420ms cubic-bezier(.2,.8,.2,1);
+}
+.tv-frame.off{
+  transform:scale(0.06);
+}
+.tv-video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.tv-vignette{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.55) 100%),
+    linear-gradient(0deg, rgba(255,255,255,0.04), rgba(0,0,0,0.02));
+}
+.tv-power{
+  position:absolute;
+  top:12px;
+  right:12px;
+  z-index:3;
+  border:none;
+  border-radius:999px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:900;
+  color:#fff;
+  background:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+}
+
+.music-toggle{
+  position:fixed;
+  right:12px;
+  bottom:12px;
+  z-index:50;
+  border:none;
+  border-radius:999px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:900;
+  color:#1f3312;
+  background:rgba(255,255,255,0.72);
+  border:1px solid rgba(0,0,0,0.08);
+  backdrop-filter: blur(10px);
+}
+.music-toggle.on{
+  background:rgba(255,255,255,0.88);
+}
+.tv-hint{
+  position:absolute;
+  left:12px;
+  bottom:12px;
+  z-index:3;
+  font-size:13px;
+  font-weight:800;
+  color:rgba(255,255,255,0.85);
+  background:rgba(0,0,0,0.35);
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.10);
+}
+
+.top-marquee{
+  position:fixed;top:0;left:0;width:100%;height:52px;
+  background:rgba(255,255,255,0.5);
+  backdrop-filter: blur(8px);
+  z-index:20;display:flex;align-items:center;
+  border-bottom:1px solid rgba(0,0,0,0.06);
+}
+.top-marquee-track{
+  white-space:nowrap;
+  padding-left:100%;
+  animation:marquee 16s linear infinite;
+  font-size:20px;font-weight:700;
+}
+@keyframes marquee{
+  from{transform:translateX(0);}
+  to{transform:translateX(-100%);}
+}
+
+.main{
+  position:relative;
+  z-index:30;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:70px 14px 20px;
+}
+
+.title{
+  font-size:52px;
+  font-weight:900;
+  animation:breath 3s ease-in-out infinite;
+}
+@keyframes breath{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.05);}
+}
+
+.subtitle{font-size:24px;margin-bottom:6px;}
+
+.rank-tip{
+  margin-bottom:10px;
+  font-size:16px;
+  color:#5a7a1a;
+  font-weight:600;
+}
+
+.countdown{
+  font-size:20px;
+  background:rgba(255,255,255,.6);
+  padding:10px 16px;
+  border-radius:16px;
+  margin-bottom:18px;
+}
+
+.danmu-layer{
+  position:fixed;
+  top:0;left:0;width:100%;height:100%;
+  z-index:10;
+  pointer-events:none;
+}
+
+.danmu-item{
+  position:absolute;
+  white-space:nowrap;
+  padding:5px 12px;
+  border-radius:16px;
+  font-size:16px;
+  font-weight:700;
+  color:#2a3a1a;
+  background:linear-gradient(135deg,#f0ffd9,#b7e27a,#9acd32);
+  animation:danmuMove linear forwards;
+  box-shadow:0 10px 26px rgba(0,0,0,0.14);
+  border:1px solid rgba(0,0,0,0.08);
+}
+
+@keyframes danmuMove{
+  from{transform:translateX(0);}
+  to{transform:translateX(-220vw);}
+}
+
+.danmu-item{
+  /* 给弹幕一点“呼吸空间” */
+  margin-top:6px;
+}
+
+.danmu-panel{
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;
+  width:90%;
+  max-width:520px;
+  margin-bottom:18px;
+}
+
+.danmu-panel button{
+  padding:12px 10px;
+  border-radius:999px;
+  border:none;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.25s;
+  background:linear-gradient(135deg,#f0ffd9,#b7e27a);
+  box-shadow:0 10px 26px rgba(0,0,0,0.14);
+  border:1px solid rgba(0,0,0,0.08);
+}
+
+.danmu-panel button:active{
+  transform:scale(0.9);
+}
+
+.danmu-panel button.clicked{
+  animation:pop 0.3s;
+}
+@keyframes pop{
+  50%{transform:scale(1.15);}
+}
+
+.top-rank{
+  background:linear-gradient(135deg,#7cb329,#4caf50) !important;
+  color:#fff !important;
+  transform:scale(1.05);
+  box-shadow:0 0 15px rgba(124,179,41,0.6);
+}
+
+.action-buttons{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.action-buttons button{
+  border:none;
+  border-radius:14px;
+  padding:10px 14px;
+  background:linear-gradient(135deg,#9acd32,#7cb329);
+  color:#fff;
+  cursor:pointer;
+}
+
+.tutorial-btn{
+  margin-top:14px;
+  padding:10px 18px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#d4f0b0,#9acd32);
+  color:#2a3a1a;
+  font-weight:700;
+  text-decoration:none;
+  display:inline-block;
+}
+
+@media(max-width:520px){
+  .title{font-size:42px;}
+  .subtitle{font-size:20px;}
+  .countdown{font-size:17px;}
+  .danmu-panel{grid-template-columns:1fr;}
+  .tv-frame{ width:96vw; border-radius:14px; }
+  .tv-power{ padding:12px 14px; }
+}
+
+.brand-inline{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.logo-inline{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  object-fit:cover;
+  display:inline-block;
+  background:rgba(255,255,255,0.9);
+  border:2px solid rgba(30,50,10,0.18);
+  box-shadow:0 8px 22px rgba(0,0,0,0.18);
+}
+/* ✅ 手机优化（不改结构版） */
+@media(max-width:520px){
+
+  .title{
+    font-size:34px; /* 再小一点更舒服 */
+  }
+
+  .subtitle{
+    font-size:18px;
+  }
+
+  .top-marquee-track{
+    font-size:16px; /* 顶部别太挤 */
+    animation:marquee 20s linear infinite; /* 慢一点 */
+  }
+
+  .action-buttons button{
+    padding:14px 0; /* 更好点 */
+    font-size:16px;
+  }
+
+  .danmu-panel button{
+    padding:14px 12px;
+    font-size:15px;
+  }
+}
+</style>
+</head>
+
+<body>
+<audio id="bgMusic" preload="auto" loop>
+  <source src="bg.mp3" type="audio/mpeg">
+</audio>
+<button class="music-toggle" id="musicToggle" type="button">音乐：关</button>
+
+<!-- 打开网页先弹出“电视机”视频 -->
+<div class="tv-overlay" id="tvOverlay">
+  <div class="tv-frame" id="tvFrame">
+    <button class="tv-power" id="tvPowerBtn" type="button">关机</button>
+    <div class="tv-hint" id="tvHint">点一下视频可开/关声音</div>
+    <video class="tv-video" id="tvVideo" autoplay playsinline preload="auto">
+      <source src="intro.mp4" type="video/mp4">
+    </video>
+    <div class="tv-vignette"></div>
+  </div>
+</div>
+
+<div class="top-marquee">
+  <div class="top-marquee-track">
+
+    <span class="brand-inline">
+      <img src="logo.jpg" class="logo-inline">
+      米米宇宙出品
+    </span>
+
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    ❗凌晨别签到（会被吞）！！白天一定要签到！！单日冲10w！！！
+
+  </div>
+</div>
+
+<div class="danmu-layer" id="danmuLayer"></div>
+
+<main class="main">
+  <div class="title">25号微店投票！！记得签到！！</div>
+  <div class="subtitle">签到单日冲10w！！</div>
+  <div class="rank-tip" id="rankTip"></div>
+  <div class="countdown" id="countdown"></div>
+
+  <div class="danmu-panel" id="danmuPanel"></div>
+
+  <div class="action-buttons">
+    <button onclick="showReminder()">立刻提醒</button>
+    <button onclick="copySlogan()">复制文案</button>
+    <button onclick="addCalendar()">📅 日历提醒</button>
+  </div>
+
+  <a href="https://weibo.com/8387849163/QBzpZoDXU" target="_blank" class="tutorial-btn">
+    📘 不会投？点这里看教程
+  </a>
+</main>
+
+<script>
+function showReminder(){
+  alert("❗凌晨别签到（容易被吞）！！\n✅一定要签到！！\n🔥单日冲10w！！！");
+}
+
+function copySlogan(){
+  navigator.clipboard.writeText("25号微店集合10w！大家呼朋唤友一起来呀，助力only展！！");
+  alert("已复制！");
+}
+
+function addCalendar(){
+  const start = new Date();
+  start.setDate(25);
+  start.setHours(9,0,0);
+
+  const end = new Date(start.getTime() + 60*60*1000);
+
+  const format = d =>
+    d.toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+
+  const ics = `
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:25号投栩你渝生！
+DESCRIPTION:记得去微店投票！
+DTSTART:${format(start)}
+DTEND:${format(end)}
+END:VEVENT
+END:VCALENDAR`.trim();
+
+  const url = "data:text/calendar;charset=utf8," + encodeURIComponent(ics);
+  window.location.href = url;
+}
+
+function updateCountdown(){
+  const now=new Date();
+  let target=new Date();
+  target.setDate(25);
+  target.setHours(0,0,0,0);
+  if(now.getDate()>25) target.setMonth(target.getMonth()+1);
+
+  const diff=target-now;
+  const d=Math.floor(diff/86400000);
+  const h=Math.floor(diff/3600000%24);
+  const m=Math.floor(diff/60000%60);
+  const s=Math.floor(diff/1000%60);
+
+  document.getElementById("countdown").innerText=
+    `距离25号：${d}天 ${h}时 ${m}分 ${s}秒`;
+}
+setInterval(updateCountdown,1000);
+updateCountdown();
+
+const danmuTexts=[
+  "雷朋99","栩你渝生此生平安幸福","雷朋长命百岁",
+  "栩光同行潮汐不渝","爱情伟大","123进"
+];
+
+let danmuStats=JSON.parse(localStorage.getItem("danmuStats")||"{}");
+danmuTexts.forEach(t=>{ if(!danmuStats[t]) danmuStats[t]=0; });
+
+/* 弹幕/按钮配色：淡红/淡绿/淡蓝/淡黄 */
+const palettes=[
+  ["#ffe1ea","#ffb3c7","#ff87a9"], // 淡红
+  ["#e6ffdf","#baf2bb","#7bd389"], // 淡绿
+  ["#e3f2ff","#b6dcff","#77b6ff"], // 淡蓝
+  ["#fff3c4","#ffe08a","#ffd166"], // 淡黄
+];
+function hashCode(str){
+  let h=0;
+  for(let i=0;i<str.length;i++){
+    h=(h<<5)-h+str.charCodeAt(i);
+    h|=0;
+  }
+  return h;
+}
+function paletteFor(text){
+  const idx=Math.abs(hashCode(text))%palettes.length;
+  return palettes[idx];
+}
+
+/* 弹幕跑道，避免上下挤在一起 */
+let laneCursor = 0;
+function nextLaneTopPx(){
+  const lanes = 8;
+  const usableH = Math.max(260, window.innerHeight - 120);
+  const laneH = usableH / lanes;
+  const topBase = 70; // 避开顶部跑马灯
+  laneCursor = (laneCursor + 1) % lanes;
+  const jitter = (Math.random() - 0.5) * Math.min(10, laneH * 0.25);
+  return topBase + laneCursor * laneH + jitter;
+}
+
+function renderBtns(){
+  const box=document.getElementById("danmuPanel");
+  box.innerHTML="";
+
+  let maxName="",maxCount=0;
+  danmuTexts.forEach(t=>{
+    if(danmuStats[t]>maxCount){
+      maxCount=danmuStats[t];
+      maxName=t;
+    }
+  });
+
+  if(maxCount>0){
+    document.getElementById("rankTip").innerText=
+      `🔥 当前最火：${maxName}（${maxCount}票）`;
+  }
+
+  danmuTexts.forEach(t=>{
+    const b=document.createElement("button");
+    const count=danmuStats[t];
+    /* 按钮后面不显示数字 */
+    b.innerText=`${t}`;
+
+    const p=paletteFor(t);
+    b.style.background=`linear-gradient(135deg, ${p[0]}, ${p[1]}, ${p[2]})`;
+
+    if(t===maxName && maxCount>0){
+      b.classList.add("top-rank");
+    }
+
+    b.onclick=()=>{
+      b.classList.add("clicked");
+      setTimeout(()=>b.classList.remove("clicked"),300);
+
+      danmuStats[t]++;
+      localStorage.setItem("danmuStats",JSON.stringify(danmuStats));
+      renderBtns();
+
+      /* 点一次只出现一条弹幕 */
+      sendDanmu(t);
+    };
+
+    box.appendChild(b);
+  });
+}
+renderBtns();
+
+function sendDanmu(text){
+  const layer=document.getElementById("danmuLayer");
+  const d=document.createElement("div");
+  d.className="danmu-item";
+  d.innerText=text;
+
+  const p=paletteFor(text);
+  d.style.background=`linear-gradient(135deg, ${p[1]}, ${p[0]})`;
+
+  d.style.top = nextLaneTopPx() + "px";
+  d.style.left="100%";
+
+  /* 不要太挤：速度稍慢一点，条数也变成 1 条/点击 */
+  const duration=16+Math.random()*5;
+  d.style.animationDuration=duration+"s";
+
+  layer.appendChild(d);
+  setTimeout(()=>d.remove(),duration*1000);
+}
+
+// ========= 电视机视频逻辑 =========
+const tvOverlay = document.getElementById("tvOverlay");
+const tvFrame = document.getElementById("tvFrame");
+const tvVideo = document.getElementById("tvVideo");
+const powerBtn = document.getElementById("tvPowerBtn");
+const tvHint = document.getElementById("tvHint");
+
+// ========= 背景音乐 =========
+const bgMusic = document.getElementById("bgMusic");
+const musicToggle = document.getElementById("musicToggle");
+let musicOn = true; // 默认开（如果被拦截，会在首次点击时自动开始）
+
+async function setMusic(on){
+  musicOn = on;
+  if(musicOn){
+    try{ await bgMusic.play(); }catch(e){}
+  }else{
+    try{ bgMusic.pause(); }catch(e){}
+  }
+  musicToggle.textContent = musicOn ? "音乐：开" : "音乐：关";
+  musicToggle.classList.toggle("on", musicOn);
+}
+musicToggle.addEventListener("click", ()=>setMusic(!musicOn));
+
+// 页面一进来就尝试播放；若手机拦截，则用户首次触摸/点击时再自动启动
+setMusic(true);
+document.addEventListener("pointerdown", ()=>{
+  if(musicOn && bgMusic.paused) setMusic(true);
+}, { once:true });
+
+// 浏览器通常限制“有声音自动播放”，所以先静音自动播；用户点一下再开声音
+tvVideo.muted = true;
+
+async function startTv(){
+  // 如果视频文件不存在，直接不显示覆盖层
+  const hasSource = tvVideo.querySelector("source")?.getAttribute("src");
+  if(!hasSource){
+    tvOverlay.classList.add("hidden");
+    return;
+  }
+
+  try{ await tvVideo.play(); }catch(e){}
+
+  // 播完自动关机
+  tvVideo.addEventListener("ended", () => powerOffToBg(), { once:true });
+}
+
+function powerOffToBg(){
+  tvFrame.classList.add("off");
+
+  // 先收缩，再淡出遮罩
+  setTimeout(()=>{
+    tvOverlay.classList.add("hidden");
+  }, 300);
+}
+
+powerBtn.addEventListener("click", powerOffToBg);
+
+// 点视频切换静音（用户手势后才允许开声音）
+tvVideo.addEventListener("click", async ()=>{
+  tvVideo.muted = !tvVideo.muted;
+  tvHint.textContent = tvVideo.muted ? "点一下视频可开/关声音（当前：静音）" : "点一下视频可开/关声音（当前：有声）";
+  try{ await tvVideo.play(); }catch(e){}
+});
+
+startTv();
+</script>
+
+</body>
+</html>
